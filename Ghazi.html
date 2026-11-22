@@ -1,0 +1,863 @@
+```html
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ghazi - Pedang Legendaris</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        /* Gaya Kustom untuk Nuansa Fantasi & Arena Merah Epik */
+        body {
+            font-family: 'Inter', sans-serif;
+            background: radial-gradient(circle at center, #990000 0%, #4a0000 65%, #1f0000 100%);
+            overflow: hidden;
+            touch-action: none; /* Mencegah scroll layar saat bermain di HP */
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .font-fantasy {
+            font-family: 'Cinzel', serif;
+        }
+
+        /* Efek tombol bergaya game arcade */
+        .btn-epic {
+            background: linear-gradient(180deg, #ffd700 0%, #d97706 100%);
+            box-shadow: 0 4px 0 #78350f, 0 8px 20px rgba(0, 0, 0, 0.5);
+            transition: all 0.1s ease;
+        }
+        .btn-epic:hover {
+            filter: brightness(1.08);
+            transform: translateY(-1px);
+        }
+        .btn-epic:active {
+            transform: translateY(3px);
+            box-shadow: 0 1px 0 #78350f, 0 3px 10px rgba(0, 0, 0, 0.5);
+        }
+
+        /* Animasi melayang untuk judul */
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-6px); }
+        }
+        .animate-float {
+            animation: float 3s ease-in-out infinite;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            cursor: none; /* Sembunyikan kursor standar saat bermain */
+        }
+    </style>
+</head>
+<body class="w-screen h-screen flex flex-col items-center justify-center relative text-white">
+
+    <!-- Header HUD (Skor, Judul ghazi, dan Nyawa) -->
+    <header class="absolute top-0 left-0 w-full z-20 px-4 py-3 sm:px-8 sm:py-4 flex items-center justify-between pointer-events-none">
+        <!-- Kotak Skor -->
+        <div class="bg-black/50 backdrop-blur-md border border-yellow-500/40 rounded-xl px-4 py-2 shadow-lg">
+            <div class="text-xs uppercase tracking-wider text-yellow-300/80 font-semibold">Skor</div>
+            <div id="scoreDisplay" class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">0</div>
+        </div>
+
+        <!-- Judul Utama "ghazi" -->
+        <div class="text-center">
+            <h1 class="font-fantasy text-3xl sm:text-5xl font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-b from-yellow-200 via-yellow-400 to-amber-600 drop-shadow-[0_4px_6px_rgba(0,0,0,0.8)]">
+                ghazi
+            </h1>
+            <div class="text-[10px] sm:text-xs uppercase tracking-[0.25em] text-red-200/80 font-semibold">
+                Pedang Legendaris
+            </div>
+        </div>
+
+        <!-- Indikator Nyawa -->
+        <div class="bg-black/50 backdrop-blur-md border border-red-400/40 rounded-xl px-4 py-2 shadow-lg flex flex-col items-end">
+            <div class="text-xs uppercase tracking-wider text-red-200/80 font-semibold mb-1">Nyawa</div>
+            <div id="livesDisplay" class="flex items-center gap-1.5 text-xl sm:text-2xl">
+                <!-- Ikon hati dirender oleh JS -->
+            </div>
+        </div>
+    </header>
+
+    <!-- Area Canvas Utama -->
+    <main id="canvasContainer" class="w-full h-full relative">
+        <canvas id="gameCanvas"></canvas>
+    </main>
+
+    <!-- Layar Mulai (Start Screen) -->
+    <div id="startScreen" class="absolute inset-0 z-30 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+        <div class="max-w-md w-full bg-gradient-to-b from-red-950 to-stone-950 border-2 border-yellow-500/60 rounded-2xl p-6 sm:p-8 text-center shadow-2xl">
+            <div class="inline-block px-3 py-1 rounded-full bg-red-900/80 border border-red-500/50 text-xs font-bold uppercase tracking-widest text-yellow-300 mb-3">
+                Arena Tebasan
+            </div>
+            <h2 class="font-fantasy text-5xl sm:text-6xl font-black text-yellow-400 drop-shadow-md mb-2 animate-float">
+                ghazi
+            </h2>
+            <p class="text-red-100/90 text-sm sm:text-base mb-6 leading-relaxed">
+                Kendalikan pedang legendaris! Tebas <span class="text-cyan-300 font-bold">Kristal Energi</span> untuk meraih skor tertinggi, dan hindari <span class="text-stone-400 font-bold">Bola Batu Meteor</span>!
+            </p>
+
+            <!-- Panduan Singkat -->
+            <div class="grid grid-cols-2 gap-3 mb-6 text-left text-xs sm:text-sm">
+                <div class="bg-black/40 border border-cyan-500/30 rounded-xl p-3 flex items-center gap-2.5">
+                    <span class="text-2xl">💎</span>
+                    <div>
+                        <div class="font-bold text-cyan-300">Kristal Energi</div>
+                        <div class="text-gray-300">+10 Poin</div>
+                    </div>
+                </div>
+                <div class="bg-black/40 border border-red-500/30 rounded-xl p-3 flex items-center gap-2.5">
+                    <span class="text-2xl">☄️</span>
+                    <div>
+                        <div class="font-bold text-red-400">Batu Meteor</div>
+                        <div class="text-gray-300">-1 Nyawa</div>
+                    </div>
+                </div>
+            </div>
+
+            <button id="startBtn" class="btn-epic w-full py-3.5 px-6 rounded-xl font-extrabold text-stone-950 text-lg uppercase tracking-wider cursor-pointer">
+                Mulai Bertarung
+            </button>
+            <p class="mt-4 text-xs text-red-200/70">
+                Geser Mouse atau Sentuh Layar untuk menggerakkan pedang
+            </p>
+        </div>
+    </div>
+
+    <!-- Layar Game Over -->
+    <div id="gameOverScreen" class="hidden absolute inset-0 z-30 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
+        <div class="max-w-md w-full bg-gradient-to-b from-red-950 to-stone-950 border-2 border-red-500/70 rounded-2xl p-6 sm:p-8 text-center shadow-2xl">
+            <h2 class="font-fantasy text-4xl sm:text-5xl font-black text-red-500 drop-shadow mb-1">
+                PERMAINAN SELESAI
+            </h2>
+            <p class="text-red-200/80 text-sm mb-6">Pedang <span class="text-yellow-400 font-bold">ghazi</span> telah berjuang dengan gagah!</p>
+
+            <div class="bg-black/50 border border-yellow-500/30 rounded-xl p-4 mb-6 flex justify-around">
+                <div>
+                    <div class="text-xs uppercase text-gray-400">Skor Akhir</div>
+                    <div id="finalScore" class="text-3xl font-black text-yellow-400">0</div>
+                </div>
+                <div class="w-px bg-white/10"></div>
+                <div>
+                    <div class="text-xs uppercase text-gray-400">Skor Terbaik</div>
+                    <div id="bestScore" class="text-3xl font-black text-white">0</div>
+                </div>
+            </div>
+
+            <button id="restartBtn" class="btn-epic w-full py-3.5 px-6 rounded-xl font-extrabold text-stone-950 text-lg uppercase tracking-wider cursor-pointer">
+                Mulai Ulang
+            </button>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * GAME ARCADE: GHAZI - PEDANG LEGENDARIS
+         * Menggunakan HTML5 Canvas, sistem partikel, efek tebasan, dan audio sintetis Web Audio API.
+         */
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const container = document.getElementById('canvasContainer');
+
+        // Elemen UI
+        const scoreDisplay = document.getElementById('scoreDisplay');
+        const livesDisplay = document.getElementById('livesDisplay');
+        const startScreen = document.getElementById('startScreen');
+        const gameOverScreen = document.getElementById('gameOverScreen');
+        const finalScoreEl = document.getElementById('finalScore');
+        const bestScoreEl = document.getElementById('bestScore');
+        const startBtn = document.getElementById('startBtn');
+        const restartBtn = document.getElementById('restartBtn');
+
+        // Status Game
+        let gameState = 'START'; // 'START', 'PLAYING', 'GAMEOVER'
+        let score = 0;
+        let bestScore = localStorage.getItem('ghazi_best_score') || 0;
+        let lives = 3;
+        let frameCount = 0;
+        let shakeTime = 0;
+        let difficultyMultiplier = 1;
+
+        // Objek Pemain (Pedang Terbang)
+        const sword = {
+            x: 0,
+            y: 0,
+            targetX: 0,
+            targetY: 0,
+            angle: 0,
+            speed: 0,
+            trail: [], // Jejak tebasan cahaya pedang
+            slashFlash: 0
+        };
+
+        // Array Entitas Game
+        let items = [];       // Kristal energi & Batu meteor
+        let particles = [];   // Percikan partikel tebasan/ledakan
+        let floatingTexts = []; // Teks "+10" atau "AWAS!" melayang
+        let bgEmbers = [];    // Bara api latar belakang untuk atmosfer merah epik
+
+        // Sistem Audio Sintetis (Tanpa file eksternal)
+        let audioCtx = null;
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function playSlashSound(isGold = false) {
+            if (!audioCtx) return;
+            try {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = isGold ? 'triangle' : 'sine';
+                const now = audioCtx.currentTime;
+                osc.frequency.setValueAtTime(isGold ? 520 : 380, now);
+                osc.frequency.exponentialRampToValueAtTime(isGold ? 1200 : 880, now + 0.14);
+                
+                gain.gain.setValueAtTime(0.18, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start(now);
+                osc.stop(now + 0.15);
+            } catch (e) {}
+        }
+
+        function playHitRockSound() {
+            if (!audioCtx) return;
+            try {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sawtooth';
+                const now = audioCtx.currentTime;
+                osc.frequency.setValueAtTime(140, now);
+                osc.frequency.exponentialRampToValueAtTime(40, now + 0.25);
+
+                gain.gain.setValueAtTime(0.25, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start(now);
+                osc.stop(now + 0.25);
+            } catch (e) {}
+        }
+
+        // Pengaturan Ukuran Canvas Responsif
+        function resizeCanvas() {
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+            if (gameState === 'START') {
+                sword.x = canvas.width / 2;
+                sword.y = canvas.height * 0.65;
+                sword.targetX = sword.x;
+                sword.targetY = sword.y;
+            }
+        }
+        window.addEventListener('resize', resizeCanvas);
+
+        // Inisialisasi Bara Api Latar Belakang
+        function initEmbers() {
+            bgEmbers = [];
+            for (let i = 0; i < 35; i++) {
+                bgEmbers.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    r: Math.random() * 2.5 + 0.8,
+                    vy: -(Math.random() * 0.8 + 0.3),
+                    alpha: Math.random() * 0.6 + 0.2
+                });
+            }
+        }
+
+        // Update Tampilan HUD Nyawa
+        function updateLivesUI() {
+            livesDisplay.innerHTML = '';
+            for (let i = 0; i < 3; i++) {
+                const heart = document.createElement('span');
+                heart.textContent = '❤️';
+                heart.className = i < lives ? 'opacity-100 scale-100 transition-all' : 'opacity-20 grayscale scale-75 transition-all';
+                livesDisplay.appendChild(heart);
+            }
+        }
+
+        // Kontrol Mouse & Layar Sentuh (Touchscreen)
+        function updatePointerPosition(clientX, clientY) {
+            const rect = canvas.getBoundingClientRect();
+            sword.targetX = clientX - rect.left;
+            sword.targetY = clientY - rect.top;
+        }
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (gameState === 'PLAYING') {
+                updatePointerPosition(e.clientX, e.clientY);
+            }
+        });
+
+        canvas.addEventListener('touchstart', (e) => {
+            if (gameState === 'PLAYING' && e.touches.length > 0) {
+                updatePointerPosition(e.touches[0].clientX, e.touches[0].clientY);
+            }
+        }, { passive: false });
+
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            if (gameState === 'PLAYING' && e.touches.length > 0) {
+                updatePointerPosition(e.touches[0].clientX, e.touches[0].clientY);
+            }
+        }, { passive: false });
+
+        // Memulai atau Mengulang Game
+        function startGame() {
+            initAudio();
+            score = 0;
+            lives = 3;
+            frameCount = 0;
+            difficultyMultiplier = 1;
+            items = [];
+            particles = [];
+            floatingTexts = [];
+            sword.trail = [];
+
+            sword.x = canvas.width / 2;
+            sword.y = canvas.height * 0.7;
+            sword.targetX = sword.x;
+            sword.targetY = sword.y;
+
+            scoreDisplay.textContent = '0';
+            updateLivesUI();
+
+            startScreen.classList.add('hidden');
+            gameOverScreen.classList.add('hidden');
+            gameState = 'PLAYING';
+        }
+
+        startBtn.addEventListener('click', startGame);
+        restartBtn.addEventListener('click', startGame);
+
+        // Memunculkan Kristal Energi atau Batu Meteor
+        function spawnItem() {
+            const margin = 45;
+            const x = margin + Math.random() * (canvas.width - margin * 2);
+            const rand = Math.random();
+
+            // Peluang batu meteor meningkat seiring bertambahnya skor
+            const rockChance = Math.min(0.45, 0.22 + (score * 0.0005));
+
+            if (rand < rockChance) {
+                // Batu Meteor (Rintangan)
+                const radius = 22 + Math.random() * 12;
+                items.push({
+                    type: 'ROCK',
+                    x: x,
+                    y: -radius,
+                    radius: radius,
+                    vy: (2.8 + Math.random() * 2.2) * difficultyMultiplier,
+                    vx: (Math.random() - 0.5) * 1.5,
+                    rotation: Math.random() * Math.PI * 2,
+                    vRot: (Math.random() - 0.5) * 0.08,
+                    vertices: generateRockVertices(radius)
+                });
+            } else {
+                // Kristal Energi (Target Tebasan)
+                const isGoldCrystal = Math.random() < 0.15; // 15% kristal emas bernilai ganda
+                const radius = isGoldCrystal ? 20 : 22;
+                items.push({
+                    type: isGoldCrystal ? 'GOLD_CRYSTAL' : 'CRYSTAL',
+                    x: x,
+                    y: -radius,
+                    radius: radius,
+                    vy: (2.5 + Math.random() * 2.0) * difficultyMultiplier,
+                    vx: (Math.random() - 0.5) * 1.2,
+                    rotation: 0,
+                    vRot: (Math.random() - 0.5) * 0.05
+                });
+            }
+        }
+
+        // Membuat bentuk poligon batu tidak beraturan
+        function generateRockVertices(radius) {
+            const points = [];
+            const sides = 8;
+            for (let i = 0; i < sides; i++) {
+                const angle = (i / sides) * Math.PI * 2;
+                const dist = radius * (0.8 + Math.random() * 0.35);
+                points.push({
+                    x: Math.cos(angle) * dist,
+                    y: Math.sin(angle) * dist
+                });
+            }
+            return points;
+        }
+
+        // Membuat Efek Partikel Tebasan / Ledakan
+        function createParticles(x, y, color1, color2, count = 16) {
+            for (let i = 0; i < count; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 6 + 2;
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    size: Math.random() * 4 + 2,
+                    color: Math.random() > 0.5 ? color1 : color2,
+                    life: 1.0,
+                    decay: Math.random() * 0.03 + 0.02
+                });
+            }
+        }
+
+        // Efek Garis Tebasan Tajam saat Memotong Kristal
+        function createSlashEffect(x, y, angle, color) {
+            particles.push({
+                isSlashLine: true,
+                x: x,
+                y: y,
+                angle: angle,
+                length: 75,
+                color: color,
+                life: 1.0,
+                decay: 0.08
+            });
+        }
+
+        // Teks Melayang
+        function addFloatingText(x, y, text, color) {
+            floatingTexts.push({
+                x: x,
+                y: y,
+                text: text,
+                color: color,
+                life: 1.0
+            });
+        }
+
+        // Menggambar Pedang Legendaris "ghazi"
+        function drawSword(x, y, angle, flash) {
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.rotate(angle);
+
+            // Aura cahaya pedang
+            if (flash > 0) {
+                ctx.shadowColor = '#fde047';
+                ctx.shadowBlur = 25 * flash;
+            } else {
+                ctx.shadowColor = 'rgba(255, 215, 0, 0.45)';
+                ctx.shadowBlur = 12;
+            }
+
+            // Skala pedang
+            const s = 0.85;
+            ctx.scale(s, s);
+
+            // 1. Ujung Bilah Pedang (Atas)
+            ctx.beginPath();
+            ctx.moveTo(0, -68);
+            ctx.lineTo(-10, -45);
+            ctx.lineTo(10, -45);
+            ctx.closePath();
+            ctx.fillStyle = '#f8fafc';
+            ctx.fill();
+
+            // 2. Bilah Pedang Kiri (Terang)
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(-10, -45, 10, 68);
+
+            // 3. Bilah Pedang Kanan (Bayangan 3D)
+            ctx.fillStyle = '#cbd5e1';
+            ctx.fillRect(0, -45, 10, 68);
+
+            // Garis tengah bilah bercahaya
+            ctx.beginPath();
+            ctx.moveTo(0, -60);
+            ctx.lineTo(0, 23);
+            ctx.strokeStyle = flash > 0 ? '#fef08a' : '#38bdf8';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // 4. Pelindung Tangan (Crossguard Emas)
+            ctx.fillStyle = '#f59e0b';
+            ctx.strokeStyle = '#78350f';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.roundRect(-24, 23, 48, 9, 4);
+            ctx.fill();
+            ctx.stroke();
+
+            // Permata merah di tengah pelindung tangan
+            ctx.beginPath();
+            ctx.arc(0, 27.5, 4, 0, Math.PI * 2);
+            ctx.fillStyle = '#ef4444';
+            ctx.fill();
+
+            // 5. Gagang Pedang (Grip)
+            ctx.fillStyle = '#451a03';
+            ctx.fillRect(-5, 32, 10, 24);
+
+            // 6. Pommel (Ujung Bawah Emas)
+            ctx.beginPath();
+            ctx.arc(0, 60, 7, 0, Math.PI * 2);
+            ctx.fillStyle = '#fbbf24';
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.restore();
+        }
+
+        // Menggambar Kristal Energi
+        function drawCrystal(item) {
+            ctx.save();
+            ctx.translate(item.x, item.y);
+            ctx.rotate(item.rotation);
+
+            const isGold = item.type === 'GOLD_CRYSTAL';
+            const r = item.radius;
+
+            ctx.shadowColor = isGold ? '#facc15' : '#22d3ee';
+            ctx.shadowBlur = 18;
+
+            // Bentuk berlian kristal segi enam
+            ctx.beginPath();
+            ctx.moveTo(0, -r * 1.3);
+            ctx.lineTo(r * 0.85, -r * 0.3);
+            ctx.lineTo(r * 0.85, r * 0.3);
+            ctx.lineTo(0, r * 1.3);
+            ctx.lineTo(-r * 0.85, r * 0.3);
+            ctx.lineTo(-r * 0.85, -r * 0.3);
+            ctx.closePath();
+
+            const grad = ctx.createLinearGradient(-r, -r, r, r);
+            if (isGold) {
+                grad.addColorStop(0, '#fef08a');
+                grad.addColorStop(0.5, '#eab308');
+                grad.addColorStop(1, '#a16207');
+            } else {
+                grad.addColorStop(0, '#cffafe');
+                grad.addColorStop(0.5, '#06b6d4');
+                grad.addColorStop(1, '#0e7490');
+            }
+            ctx.fillStyle = grad;
+            ctx.fill();
+
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = '#ffffff';
+            ctx.stroke();
+
+            // Kilau dalam kristal
+            ctx.beginPath();
+            ctx.moveTo(0, -r * 0.8);
+            ctx.lineTo(r * 0.4, 0);
+            ctx.lineTo(0, r * 0.8);
+            ctx.lineTo(-r * 0.4, 0);
+            ctx.closePath();
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+            ctx.fill();
+
+            ctx.restore();
+        }
+
+        // Menggambar Batu Meteor
+        function drawRock(item) {
+            ctx.save();
+            ctx.translate(item.x, item.y);
+            ctx.rotate(item.rotation);
+
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
+            ctx.shadowBlur = 12;
+
+            ctx.beginPath();
+            item.vertices.forEach((pt, idx) => {
+                if (idx === 0) ctx.moveTo(pt.x, pt.y);
+                else ctx.lineTo(pt.x, pt.y);
+            });
+            ctx.closePath();
+
+            const grad = ctx.createRadialGradient(-5, -5, 2, 0, 0, item.radius);
+            grad.addColorStop(0, '#78716c');
+            grad.addColorStop(0.6, '#44403c');
+            grad.addColorStop(1, '#1c1917');
+            ctx.fillStyle = grad;
+            ctx.fill();
+
+            ctx.lineWidth = 2.5;
+            ctx.strokeStyle = '#ef4444'; // Garis tepi merah bahaya
+            ctx.stroke();
+
+            // Kawah kecil pada batu
+            ctx.beginPath();
+            ctx.arc(-item.radius * 0.25, -item.radius * 0.2, item.radius * 0.22, 0, Math.PI * 2);
+            ctx.fillStyle = '#292524';
+            ctx.fill();
+
+            ctx.restore();
+        }
+
+        // Loop Logika Utama
+        function update() {
+            // Update bara api latar belakang selalu berjalan
+            bgEmbers.forEach(ember => {
+                ember.y += ember.vy;
+                if (ember.y < -10) {
+                    ember.y = canvas.height + 10;
+                    ember.x = Math.random() * canvas.width;
+                }
+            });
+
+            if (gameState !== 'PLAYING') return;
+
+            frameCount++;
+            difficultyMultiplier = 1 + Math.min(1.5, score * 0.0025);
+
+            // Spawn item secara berkala
+            const spawnRate = Math.max(24, Math.floor(55 / difficultyMultiplier));
+            if (frameCount % spawnRate === 0) {
+                spawnItem();
+            }
+
+            // Gerakan halus pedang mengikuti kursor / sentuhan
+            const dx = sword.targetX - sword.x;
+            const dy = sword.targetY - sword.y;
+            sword.x += dx * 0.28;
+            sword.y += dy * 0.28;
+            sword.speed = Math.hypot(dx, dy);
+
+            // Kemiringan pedang dinamis berdasarkan arah gerakan horizontal
+            const targetAngle = Math.max(-0.65, Math.min(0.65, dx * 0.025));
+            sword.angle += (targetAngle - sword.angle) * 0.2;
+
+            if (sword.slashFlash > 0) sword.slashFlash -= 0.08;
+
+            // Simpan jejak cahaya pedang (Slash Trail)
+            sword.trail.push({ x: sword.x, y: sword.y - 25, life: 1.0 });
+            if (sword.trail.length > 12) {
+                sword.trail.shift();
+            }
+            sword.trail.forEach(t => t.life -= 0.085);
+
+            // Update posisi dan deteksi tabrakan item
+            for (let i = items.length - 1; i >= 0; i--) {
+                const item = items[i];
+                item.x += item.vx;
+                item.y += item.vy;
+                item.rotation += item.vRot;
+
+                // Pantulan lembut di tepi layar
+                if (item.x < item.radius || item.x > canvas.width - item.radius) {
+                    item.vx *= -1;
+                }
+
+                // Deteksi tabrakan antara pedang dan item
+                // Area tebasan mencakup ujung hingga badan bilah pedang
+                const bladeCenterX = sword.x + Math.sin(sword.angle) * -15;
+                const bladeCenterY = sword.y - 15;
+                const dist = Math.hypot(item.x - bladeCenterX, item.y - bladeCenterY);
+
+                if (dist < item.radius + 32) {
+                    if (item.type === 'CRYSTAL' || item.type === 'GOLD_CRYSTAL') {
+                        // Berhasil menebas kristal!
+                        const isGold = item.type === 'GOLD_CRYSTAL';
+                        const points = isGold ? 25 : 10;
+                        score += points;
+                        scoreDisplay.textContent = score;
+                        sword.slashFlash = 1.0;
+
+                        playSlashSound(isGold);
+                        createParticles(
+                            item.x,
+                            item.y,
+                            isGold ? '#fde047' : '#22d3ee',
+                            '#ffffff',
+                            isGold ? 24 : 16
+                        );
+                        createSlashEffect(
+                            item.x,
+                            item.y,
+                            sword.angle - 0.5,
+                            isGold ? '#fef08a' : '#67e8f9'
+                        );
+                        addFloatingText(
+                            item.x,
+                            item.y - 15,
+                            `+${points}`,
+                            isGold ? '#fde047' : '#67e8f9'
+                        );
+
+                        items.splice(i, 1);
+                        continue;
+                    } else if (item.type === 'ROCK') {
+                        // Menabrak batu meteor!
+                        lives--;
+                        updateLivesUI();
+                        shakeTime = 16;
+                        playHitRockSound();
+                        createParticles(item.x, item.y, '#ef4444', '#78716c', 22);
+                        addFloatingText(item.x, item.y - 15, '-1 NYAWA!', '#f87171');
+
+                        items.splice(i, 1);
+
+                        if (lives <= 0) {
+                            endGame();
+                            return;
+                        }
+                        continue;
+                    }
+                }
+
+                // Hapus item jika jatuh melewati batas bawah layar
+                if (item.y - item.radius > canvas.height + 30) {
+                    items.splice(i, 1);
+                }
+            }
+
+            // Update partikel
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                if (!p.isSlashLine) {
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.vy += 0.12; // Gravitasi ringan partikel
+                }
+                p.life -= p.decay;
+                if (p.life <= 0) particles.splice(i, 1);
+            }
+
+            // Update teks melayang
+            for (let i = floatingTexts.length - 1; i >= 0; i--) {
+                const ft = floatingTexts[i];
+                ft.y -= 1.4;
+                ft.life -= 0.025;
+                if (ft.life <= 0) floatingTexts.splice(i, 1);
+            }
+
+            if (shakeTime > 0) shakeTime--;
+        }
+
+        // Mengakhiri Game
+        function endGame() {
+            gameState = 'GAMEOVER';
+            if (score > bestScore) {
+                bestScore = score;
+                localStorage.setItem('ghazi_best_score', bestScore);
+            }
+            finalScoreEl.textContent = score;
+            bestScoreEl.textContent = bestScore;
+            gameOverScreen.classList.remove('hidden');
+        }
+
+        // Loop Rendering Visual
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            ctx.save();
+            // Efek layar bergetar saat terkena batu
+            if (shakeTime > 0) {
+                const mag = shakeTime * 0.6;
+                ctx.translate((Math.random() - 0.5) * mag, (Math.random() - 0.5) * mag);
+            }
+
+            // 1. Gambar Bara Api Latar Belakang
+            bgEmbers.forEach(ember => {
+                ctx.beginPath();
+                ctx.arc(ember.x, ember.y, ember.r, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(255, 180, 50, ${ember.alpha})`;
+                ctx.fill();
+            });
+
+            // 2. Gambar Jejak Tebasan Cahaya Pedang
+            if (sword.trail.length > 1 && gameState === 'PLAYING') {
+                for (let i = 1; i < sword.trail.length; i++) {
+                    const prev = sword.trail[i - 1];
+                    const curr = sword.trail[i];
+                    if (curr.life > 0) {
+                        ctx.beginPath();
+                        ctx.moveTo(prev.x, prev.y);
+                        ctx.lineTo(curr.x, curr.y);
+                        ctx.strokeStyle = `rgba(253, 224, 71, ${curr.life * 0.55})`;
+                        ctx.lineWidth = i * 1.4;
+                        ctx.lineCap = 'round';
+                        ctx.stroke();
+                    }
+                }
+            }
+
+            // 3. Gambar Kristal Energi & Batu Meteor
+            items.forEach(item => {
+                if (item.type === 'ROCK') {
+                    drawRock(item);
+                } else {
+                    drawCrystal(item);
+                }
+            });
+
+            // 4. Gambar Pedang "ghazi"
+            drawSword(sword.x, sword.y, sword.angle, sword.slashFlash);
+
+            // 5. Gambar Partikel & Garis Tebasan
+            particles.forEach(p => {
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, p.life);
+                if (p.isSlashLine) {
+                    ctx.translate(p.x, p.y);
+                    ctx.rotate(p.angle);
+                    ctx.beginPath();
+                    ctx.moveTo(-p.length * p.life, 0);
+                    ctx.lineTo(p.length * p.life, 0);
+                    ctx.strokeStyle = p.color;
+                    ctx.lineWidth = 4 * p.life;
+                    ctx.shadowColor = p.color;
+                    ctx.shadowBlur = 12;
+                    ctx.stroke();
+                } else {
+                    ctx.fillStyle = p.color;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                ctx.restore();
+            });
+
+            // 6. Gambar Teks Melayang
+            floatingTexts.forEach(ft => {
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, ft.life);
+                ctx.font = '800 20px Inter, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillStyle = ft.color;
+                ctx.shadowColor = 'rgba(0,0,0,0.8)';
+                ctx.shadowBlur = 6;
+                ctx.fillText(ft.text, ft.x, ft.y);
+                ctx.restore();
+            });
+
+            ctx.restore();
+        }
+
+        // Main Animation Loop
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Jalankan saat halaman selesai dimuat
+        window.onload = function () {
+            resizeCanvas();
+            initEmbers();
+            updateLivesUI();
+            gameLoop();
+        };
+    </script>
+</body>
+</html>
+```
